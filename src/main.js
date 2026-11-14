@@ -12,6 +12,10 @@ const config = {
     width: 960,
     height: 540,
 
+    dom: {
+        createContainer: true, // Enables HTML elements
+    },
+
     parent: "game-container",
 
     backgroundColor: "#050816",
@@ -21,7 +25,7 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_BOTH,
     },
 
-    scene: [StartScene, TravelScene, DialogueScene, ExplorationScene],
+    scene: [ExplorationScene, StartScene, TravelScene, DialogueScene],
 };
 
 new Phaser.Game(config);
