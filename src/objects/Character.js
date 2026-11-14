@@ -8,11 +8,9 @@ export default class Character extends Phaser.GameObjects.Sprite {
 
         this.scene = scene;
 
-        // Character appearance
         this.setOrigin(0.5, 1.2);
         this.setScale(2.5);
 
-        // Movement speed
         this.speed = 200;
 
         // Keyboard controls
@@ -21,6 +19,16 @@ export default class Character extends Phaser.GameObjects.Sprite {
         this.keys = scene.input.keyboard.addKeys({
             A: Phaser.Input.Keyboard.KeyCodes.A,
             D: Phaser.Input.Keyboard.KeyCodes.D,
+        });
+
+        // Sounds
+        this.walkSound = scene.sound.add("walk", {
+            volume: 0.3,
+            loop: true,
+        });
+
+        this.throwSound = scene.sound.add("throw", {
+            volume: 0.5,
         });
 
         // Walking animation
@@ -52,17 +60,45 @@ export default class Character extends Phaser.GameObjects.Sprite {
         // Move character
         this.x += (movement * this.speed * delta) / 1000;
 
-        // Original screen boundaries
+        // Screen boundaries
         this.x = Phaser.Math.Clamp(this.x, 30, 930);
 
-        // Walking animation
+        // Don't override throwing animation
+        if (this.anims.currentAnim?.key === "characterThrowing" && this.anims.isPlaying) {
+            this.walkSound.stop();
+            return;
+        }
+
+        // Walking animation and sound
         if (movement !== 0) {
             this.setFlipX(movement < 0);
             this.anims.play("characterWalking", true);
+
+            if (!this.walkSound.isPlaying) {
+                this.walkSound.play();
+            }
         } else {
             this.anims.stop();
             this.setTexture("characterIdle");
             this.setFrame(0);
+
+            this.walkSound.stop();
         }
+    }
+
+    // Play throwing sound
+    playThrowSound() {
+        this.walkSound.stop();
+        this.throwSound.play();
+    }
+
+    destroy(fromScene) {
+        this.walkSound.stop();
+        this.throwSound.stop();
+
+        this.walkSound.destroy();
+        this.throwSound.destroy();
+
+        super.destroy(fromScene);
     }
 }
