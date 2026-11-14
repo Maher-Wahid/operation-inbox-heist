@@ -17,6 +17,14 @@ export default class ExplorationScene extends Phaser.Scene {
             frameWidth: 32,
             frameHeight: 32,
         });
+
+        // Flower image
+        this.load.image("flower", "/assets/cosmos-flower.png");
+
+        // Audio
+        this.load.audio("pickUp", "assets/pick-up.mp3");
+        this.load.audio("accepted", "/assets/accepted.mp3");
+        this.load.audio("denied", "/assets/denied.mp3");
     }
 
     create() {
@@ -27,6 +35,16 @@ export default class ExplorationScene extends Phaser.Scene {
 
         // Character
         this.player = new Character(this, 330, 480);
+
+        // Flower
+        this.flower = this.add.image(640, 445, "flower");
+        this.flowerCollected = false;
+        this.nearFlower = false;
+
+        // Audio
+        this.pickUpSound = this.sound.add("pickUp", { volume: 0.4 });
+        this.acceptedSound = this.sound.add("accepted", { volume: 0.3 });
+        this.deniedSound = this.sound.add("denied", { volume: 0.4 });
 
         // Interaction prompt
         this.prompt = this.add.text(0, 0, "Press E to enter", {
@@ -48,8 +66,8 @@ export default class ExplorationScene extends Phaser.Scene {
                 width: 80,
                 height: 100,
                 interaction: "code",
-                code: "1234",
-                nextScene: "EscapeScene",
+                code: "C0S1",
+                nextScene: "AlertScene",
             },
             {
                 name: "Door 2",
@@ -58,7 +76,8 @@ export default class ExplorationScene extends Phaser.Scene {
                 width: 80,
                 height: 100,
                 interaction: "message",
-                message: "This door seems locked too, there's probably nothing inside.",
+                message:
+                    "You hear strange noises behind the door... Best not to find out what's inside.",
             },
             {
                 name: "Door 3",
@@ -67,7 +86,8 @@ export default class ExplorationScene extends Phaser.Scene {
                 width: 80,
                 height: 100,
                 interaction: "message",
-                message: "It seems like the aliens are partying, let's not alert them...",
+                message:
+                    "A bunch of Mailorians are having a party inside! You decide not to interrupt.",
             },
         ];
 
@@ -83,9 +103,20 @@ export default class ExplorationScene extends Phaser.Scene {
         this.player.update(time, delta);
 
         this.currentDoor = null;
+        this.nearFlower = false;
 
         const playerBounds = this.player.getBounds();
 
+        // Check if player is near the flower
+        if (!this.flowerCollected && this.flower) {
+            const flowerBounds = this.flower.getBounds();
+
+            if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, flowerBounds)) {
+                this.nearFlower = true;
+            }
+        }
+
+        // Check door collisions
         for (const door of this.doors) {
             const doorBounds = new Phaser.Geom.Rectangle(door.x, door.y, door.width, door.height);
 
@@ -95,18 +126,58 @@ export default class ExplorationScene extends Phaser.Scene {
             }
         }
 
-        this.prompt.setVisible(!!this.currentDoor);
+        // Show the correct interaction prompt
+        this.prompt.setVisible(!!this.currentDoor || this.nearFlower);
 
-        if (this.currentDoor) {
+        if (this.nearFlower && !this.currentDoor) {
+            this.prompt.setText("Press E to inspect flower");
+            this.prompt.setPosition(this.flower.x, this.flower.y - 50);
+        } else if (this.currentDoor) {
+            this.prompt.setText("Press E to interact");
             this.prompt.setPosition(
                 this.currentDoor.x + this.currentDoor.width / 2,
                 this.currentDoor.y - 20,
             );
+        }
 
-            if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        // Handle E key interaction
+        if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+            if (this.nearFlower && !this.currentDoor) {
+                this.inspectFlower();
+            } else if (this.currentDoor) {
                 this.interactWithDoor(this.currentDoor);
             }
         }
+    }
+
+    // Inspect flower
+    inspectFlower() {
+        this.flowerCollected = true;
+        this.pickUpSound.play();
+
+        // Save the flower's original position
+        const flowerX = this.flower.x;
+        const flowerY = this.flower.y;
+
+        this.flower.destroy();
+        this.flower = null;
+
+        this.prompt.setVisible(false);
+
+        // Message in the middle of the screen
+        this.showMessage("A Cosmos Flower! How pretty... Wait, what's that hidden beneath it?");
+
+        // Code where the flower was
+        this.flowerText = this.add.text(flowerX, flowerY, "C0S1", {
+            fontSize: "12px",
+            color: "#ffffff",
+            padding: { x: 6, y: 4 },
+            align: "center",
+            wordWrap: { width: 150 },
+        });
+
+        this.flowerText.setOrigin(0.5);
+        this.flowerText.setDepth(5);
     }
 
     interactWithDoor(door) {
@@ -145,11 +216,11 @@ export default class ExplorationScene extends Phaser.Scene {
         this.codeInput.node.placeholder = "Enter code";
         this.codeInput.node.maxLength = 4;
         this.codeInput.node.style.cssText = `
-        width: 200px;
-        padding: 12px;
-        font-size: 20px;
-        text-align: center;
-    `;
+            width: 200px;
+            padding: 12px;
+            font-size: 20px;
+            text-align: center;
+        `;
 
         this.codeInput.setDepth(12);
         this.codeInput.node.focus();
@@ -177,8 +248,10 @@ export default class ExplorationScene extends Phaser.Scene {
 
         this.submitText.on("pointerdown", () => {
             if (this.codeInput.node.value === door.code) {
+                this.acceptedSound.play();
                 this.scene.start(door.nextScene);
             } else {
+                this.deniedSound.play();
                 this.errorText.setText("Incorrect code! Try again.");
                 this.codeInput.node.value = "";
                 this.codeInput.node.focus();

@@ -21,6 +21,13 @@ export default class StartScene extends Phaser.Scene {
 
         // Parked spaceship
         this.load.image("spaceship", "/assets/spaceship.png");
+
+        // Audio
+        this.load.audio("walk", "assets/walk.mp3");
+        this.load.audio("throw", "assets/throw.mp3");
+
+        // New spaceship music
+        this.load.audio("spaceshipMusic", "/assets/travel.mp3");
     }
 
     create() {
@@ -30,6 +37,8 @@ export default class StartScene extends Phaser.Scene {
         const scale = Math.max(960 / background.width, 540 / background.height);
 
         background.setScale(scale);
+
+        this.backgroundMusic = this.sound.get("backgroundMusic");
 
         // Spaceship
         this.ship = this.add.image(650, 465, "spaceship");
@@ -80,8 +89,23 @@ export default class StartScene extends Phaser.Scene {
             // Character disappears
             this.player.setVisible(false);
 
-            // Go to spaceship travel scene
-            this.scene.start("TravelScene");
+            // Stop WelcomeScene music
+            if (this.backgroundMusic && this.backgroundMusic.isPlaying) {
+                this.backgroundMusic.stop();
+            }
+
+            // Start spaceship music
+            this.spaceshipMusic = this.sound.add("spaceshipMusic", {
+                loop: true,
+                volume: 0.1,
+            });
+
+            this.spaceshipMusic.play();
+
+            // Wait 2.5 seconds before transitioning
+            this.time.delayedCall(1500, () => {
+                this.scene.start("TravelScene");
+            });
         }
     }
 }

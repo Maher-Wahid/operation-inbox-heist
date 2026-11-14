@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import Starfield from "../objects/Starfield.js";
 
 export default class TravelScene extends Phaser.Scene {
     constructor() {
@@ -14,6 +15,9 @@ export default class TravelScene extends Phaser.Scene {
 
     create() {
         this.cameras.main.setBackgroundColor("#000000");
+
+        const starfield = new Starfield(this);
+        starfield.create();
 
         // Create thrust animation
         this.anims.create({
@@ -31,16 +35,18 @@ export default class TravelScene extends Phaser.Scene {
 
         this.ship.play("thrust");
 
-        // Takeoff!
-        this.tweens.add({
-            targets: this.ship,
-            x: 1200,
-            y: 100,
-            duration: 2500,
-            ease: "Cubic.easeIn",
-            onComplete: () => {
-                this.scene.start("DialogueScene");
-            },
+        this.time.delayedCall(1500, () => {
+            // Takeoff!
+            this.tweens.add({
+                targets: this.ship,
+                x: 1200,
+                y: 100,
+                duration: 2500,
+                ease: "Cubic.easeIn",
+                onComplete: () => {
+                    this.scene.start("DialogueScene");
+                },
+            });
         });
     }
 }
